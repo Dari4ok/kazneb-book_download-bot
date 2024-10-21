@@ -4,7 +4,7 @@ import requests
 import os
 import time
 
-class ImageDownloader:
+class PageDownloader:
     def __init__(self, url, folder, min_width=1100, min_height=1600):
         self.url = url
         self.min_width = min_width
@@ -18,7 +18,7 @@ class ImageDownloader:
         if not os.path.exists(self.folder):
             os.makedirs(self.folder)
 
-    def download_images(self):
+    def download_pages(self):
         try:
             # сайтты ашу
             self.driver.get(self.url)
@@ -29,14 +29,14 @@ class ImageDownloader:
 
             # беттерді өлшеу
             for i, img in enumerate(images):
-                self.download_image_if_large_enough(img, i)
+                self.download_page_if_large_enough(img, i)
 
             self.driver.quit()  # браузерді жабу
         except Exception as e:
             print(f"Ошибка: {e}")
             self.driver.quit()  # қателік болса жабу
 
-    def download_image_if_large_enough(self, img, index):
+    def download_page_if_large_enough(self, img, index):
         # суреттердің өлшемін табу
         width = img.get_attribute('naturalWidth')
         height = img.get_attribute('naturalHeight')
@@ -49,17 +49,11 @@ class ImageDownloader:
             if width > self.min_width and height > self.min_height:
                 img_url = img.get_attribute('src')
                 if img_url and img_url.startswith('http'):
-                    self.save_image(img_url, index, width, height)
+                    self.save_page(img_url, index, width, height)
 
-    def save_image(self, img_url, index, width, height):
+    def save_page(self, img_url, index, width, height):
         # суреттерді сақтау
         img_data = requests.get(img_url).content
         file_path = os.path.join(self.folder, f'image_{index+1}.jpg')
         with open(file_path, 'wb') as f:
             f.write(img_data)
-
-
-if __name__ == "__main__":
-    url = 'https://kazneb.kz/kk/bookView/view?brId=1651358&simple=false'
-    downloader = ImageDownloader(url, 'Сөзтүзер')
-    downloader.download_images()
