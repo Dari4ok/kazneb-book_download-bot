@@ -1,16 +1,41 @@
 from aiogram import F, Router
-from aiogram.filters import CommandStart, command
-from aiogram.types import Message, CallbackQuery
+from aiogram.filters import CommandStart, Command
+from aiogram.types import Message, InputFile, callback_query, CallbackQuery
+
 from app.pagedownloader import PageDownloader as pages
+from app.image2pdf import PDFMaker
+from os import removedirs, remove
 
 import app.keybords as kb
+import os
+
 
 router = Router()
 waiter = False
 name = ''
 link = 'link'
-cash = ''
-format = ''
+
+@router.callback_query(F.data == 'pdf')
+async def zip_com(callback_query: CallbackQuery):
+    await callback_query.answer('PDF формат жүктелуде')
+    await callback_query.message.answer('Күте тұрыңыз, файл жүктелуде...')
+    global link
+    global name
+
+    downloader = pages(link, name)
+    downloader.download_pages()
+    pdf_maker = PDFMaker(name) 
+    pdf_maker.create_pdf()
+
+    with open(f'{name}.pdf', 'rb') as file:
+        pdf_file = InputFile(file, filename=f'{name}.pdf')
+
+    if os.path.exists(f'{name}.pdf'):
+        await callback_query.message.answer_document(document=pdf_file)
+    else:
+        await callback_query.message.answer("Кішігірм қателіктер, қайта көріңіз.")
+    remove(f'{name}.pdf')
+    removedirs(name)
 
 @router.message(CommandStart())
 async def com_start(message: Message):
@@ -30,25 +55,6 @@ async def get_name(message: Message):
     global waiter
     if waiter:
         waiter = False
-        name = message.text
+        pre_name = message.text.split(' ')
+        name = '_'.join(pre_name)
         await message.answer('Қай форматта ыңғайлы?', reply_markup=kb.ziporpdf)
-
-@router.callback_query(F.data == 'zip')
-async def zip(callback: CallbackQuery):
-    global format
-    global link
-    global name
-
-    format = 'zip'
-    await callback.answer('Кітап zip форматта жүктеледі.')
-    await callback.message.edit_text('Кітапты жүктеудеміз, күте тұрыңыз.')
-    downloader = pages(link, name)
-    downloader.download_pages()
-
-@router.callback_query(F.data == 'pdf')
-async def pdf(callback: CallbackQuery):
-    global format
-    format = 'pdf'
-    await callback.answer('Кітап pdf форматта жүктеледі.')
-    await callback.message.edit_text('Кітапты жүктеудеміз, күте тұрыңыз.')
-
